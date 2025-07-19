@@ -1,24 +1,91 @@
-<!doctype html><html><head>
-  <meta charset="utf-8"><title>Event Picture</title>
-  <style>
-    body{margin:0;background:#000;display:flex;justify-content:center;align-items:center;height:100vh;}
-    img{position:absolute;max-width:90vw;max-height:90vh;opacity:0;transition:opacity 1s;}
-    img.show{opacity:1;}
-  </style>
-</head><body>
-  <script>
-    const photos=["pic/1.jpg","pic/2.jpg","pic/3.jpg"];
-    let i=0;
-    const img=document.createElement("img");
-    document.body.appendChild(img);
-    
-    const show=()=>{
-      img.src=photos[i];
-      img.classList.add("show");
-      setTimeout(()=>img.classList.remove("show"),4900);
-      i=(i+1)%photos.length;
-    }
-    show();
-    setInterval(show,5000);
-  </script>
-</body></html>
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Event Picture</title>
+    <style>
+      body{margin:0;background:#000;height:100vh;display:flex;justify-content:center;align-items:center;overflow:hidden;}
+      .slide{
+        position:absolute;top:50%;left:50%;
+        transform:translate(-50%,-50%);
+        max-width:90vw;max-height:90vh;
+        opacity:0;                   /* 起始透明 */
+        transition:opacity .8s ease; /* 淡入淡出時間 */
+        color:#fff;font-size:3rem;text-align:center;line-height:1.3;
+        padding:0 1rem;box-sizing:border-box;
+      }
+      .show{opacity:1;}
+    </style>
+  </head>
+  <body>
+    <!-- 只有一個容器，程式碼會動態把投影片塞進來 -->
+    <div id="stage"></div>
+    <script>
+      /* === 1. 定義投影片 ===
+        slides 陣列可以混放「圖片」或「文字」：
+        - type: 'img' | 'text'
+        - src  : 圖片路徑 (若 type = 'img')
+        - content: 文字內容  (若 type = 'text')
+        - duration: 停留時間 (ms)，可選，不寫就用 defaultDuration
+      */
+      const slides = [
+        {type:'text', content:'歡迎蒞臨<br>2025 XXX', duration:4000},
+        {type:'text', content:'我不知道你要打什麼<br>不過都可以改', duration:4000},
+        {type:'img' , src:'pic/1.jpg', caption:'123'},
+        {type:'img' , src:'pic/2.jpg'},
+        {type:'img' , src:'pic/3.jpg', caption:'456'},
+        {type:'text', content:'謝謝參與！', duration:4000},
+      ];
+
+      const stage = document.getElementById('stage');
+      let idx = 0;
+      const defaultDuration = 5000;  // 沒特別指定就 5 秒換一張
+      let elem = null;
+
+      function showNext(){
+      // 1. 移除上一張
+      if(elem){ elem.classList.remove('show'); }
+
+      // 2. 取得下一張投影片資料
+      const slide = slides[idx];
+
+      // 3. 建立元素
+      if(!elem){                 // 首次建立
+        elem = document.createElement(slide.type==='img'?'img':'div');
+        elem.className = 'slide';
+        stage.appendChild(elem);
+      }else{
+        // 需要更換元素型態時（例如上一張是 img，下一張改文字）
+        const needNew = (elem.tagName.toLowerCase() === 'img') !== (slide.type==='img');
+        if(needNew){
+          stage.removeChild(elem);
+          elem = document.createElement(slide.type==='img'?'img':'div');
+          elem.className = 'slide';
+          stage.appendChild(elem);
+        }
+      }
+
+      // 4. 填入內容
+      if(slide.type==='img'){
+        elem.src = slide.src;
+        // 如果你想顯示 caption，可另外加一個文字層
+      }else{ // text
+        elem.innerHTML = slide.content;
+      }
+
+      // 5. 淡入
+      // 等圖片載入後才淡入，避免閃白
+      (slide.type==='img' ? elem.decode?.().catch(()=>{}) : Promise.resolve())
+        .finally(()=> elem.classList.add('show'));
+
+      // 6. 排定下一張時間
+      const stay = slide.duration || defaultDuration;
+      idx = (idx + 1) % slides.length;
+      setTimeout(showNext, stay);
+      }
+
+      // 先顯示第一張
+      showNext();
+    </script>
+  </body>
+</html>
