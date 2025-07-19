@@ -1,1 +1,24 @@
-<h2>活動結束後請回來看照片！</h2>
+<!doctype html><html><head>
+  <meta charset="utf-8"><title>Event Picture</title>
+  <style>
+    body{margin:0;background:#000;display:flex;justify-content:center;align-items:center;height:100vh;}
+    img{position:absolute;max-width:90vw;max-height:90vh;opacity:0;transition:opacity 1s;}
+    img.show{opacity:1;}
+  </style>
+</head><body>
+  <script>
+    const photos=["pic/1.jpg","pic/2.jpg","pic/3.jpg"];
+    let i=0;
+    const img=document.createElement("img");
+    document.body.appendChild(img);
+    
+    const show=()=>{
+      img.src=photos[i];
+      img.classList.add("show");
+      setTimeout(()=>img.classList.remove("show"),4900);
+      i=(i+1)%photos.length;
+    }
+    show();
+    setInterval(show,5000);
+  </script>
+</body></html>
