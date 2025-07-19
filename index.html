@@ -1,91 +1,122 @@
 <!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>Event Picture</title>
-    <style>
-      body{margin:0;background:#000;height:100vh;display:flex;justify-content:center;align-items:center;overflow:hidden;}
-      .slide{
-        position:absolute;top:50%;left:50%;
-        transform:translate(-50%,-50%);
-        max-width:90vw;max-height:90vh;
-        opacity:0;                   /* 起始透明 */
-        transition:opacity .8s ease; /* 淡入淡出時間 */
-        color:#fff;font-size:3rem;text-align:center;line-height:1.3;
-        padding:0 1rem;box-sizing:border-box;
-      }
-      .show{opacity:1;}
-    </style>
-  </head>
-  <body>
-    <!-- 只有一個容器，程式碼會動態把投影片塞進來 -->
-    <div id="stage"></div>
-    <script>
-      /* === 1. 定義投影片 ===
-        slides 陣列可以混放「圖片」或「文字」：
-        - type: 'img' | 'text'
-        - src  : 圖片路徑 (若 type = 'img')
-        - content: 文字內容  (若 type = 'text')
-        - duration: 停留時間 (ms)，可選，不寫就用 defaultDuration
-      */
-      const slides = [
-        {type:'text', content:'歡迎蒞臨<br>2025 XXX', duration:4000},
-        {type:'text', content:'我不知道你要打什麼<br>不過都可以改', duration:4000},
-        {type:'img' , src:'pic/1.jpg', caption:'123'},
-        {type:'img' , src:'pic/2.jpg'},
-        {type:'img' , src:'pic/3.jpg', caption:'456'},
-        {type:'text', content:'謝謝參與！', duration:4000},
-      ];
+<html lang="zh-Hant">
+    <head>
+        <meta charset="utf-8">
+        <title>文字先、照片後的疊圖輪播</title>
+        <style>
+            @font-face {
+                font-family: '粉圓體';
+                src: url('font/jf-openhuninn-2.1.ttf') format('truetype');
+            }
+            body{
+                margin:0;
+                background:#ffffff;
+                height:100vh;
+                display:flex;
+                justify-content:center;
+                align-items:center;
+                overflow:hidden;
+            }
 
-      const stage = document.getElementById('stage');
-      let idx = 0;
-      const defaultDuration = 5000;  // 沒特別指定就 5 秒換一張
-      let elem = null;
+            .layer{                /* 共同樣式：絕對置中、起始透明 */
+                position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+                opacity:0;transition:opacity .8s ease;
+            }
+            .layer.show{opacity:1;}
 
-      function showNext(){
-      // 1. 移除上一張
-      if(elem){ elem.classList.remove('show'); }
+            .textLayer{
+                color:#000000;
+                font-size:1.5rem;
+                text-align:center;
+                line-height:1.3;
+                padding:0 1rem;
+                box-sizing:border-box;
+                z-index:2; /* 在上層 */
+                font-family: '粉圓體', 'Noto Sans TC', sans-serif;
+            }
+            .imgLayer{
+                max-width:90vw;
+                max-height:90vh;
+                z-index:1;       /* 在下層 */
+            }
+        </style>
+    </head>
+    <body>
+        <div id="stage"></div>
 
-      // 2. 取得下一張投影片資料
-      const slide = slides[idx];
+        <script>
+            const slides = [
+                {type:'combo', content:'我的熱情', img:'pic/5.jpg',
+                                textStay:7000,   // 文字停留
+                                imgStay :5000,   // 圖片停留
+                                imgDelay:2000    // 圖片比文字晚多久(ms)開始淡入
+                },
+                {type:'text',  content:'好像一把火', duration:4000},
+                {type:'img',   src:'pic/2.jpg', duration:5000},
+                {type:'img',   src:'pic/3.jpg', duration:5000},
+                {type:'combo', content:'Bye Bye', img:'pic/4.jpg', 
+                                textStay:5000, 
+                                imgStay:5000, 
+                                imgDelay:0}
+            ];
 
-      // 3. 建立元素
-      if(!elem){                 // 首次建立
-        elem = document.createElement(slide.type==='img'?'img':'div');
-        elem.className = 'slide';
-        stage.appendChild(elem);
-      }else{
-        // 需要更換元素型態時（例如上一張是 img，下一張改文字）
-        const needNew = (elem.tagName.toLowerCase() === 'img') !== (slide.type==='img');
-        if(needNew){
-          stage.removeChild(elem);
-          elem = document.createElement(slide.type==='img'?'img':'div');
-          elem.className = 'slide';
-          stage.appendChild(elem);
-        }
-      }
+            const stage = document.getElementById('stage');
+            let idx = 0;
+            const fade = 800;                // 淡入/淡出時間
 
-      // 4. 填入內容
-      if(slide.type==='img'){
-        elem.src = slide.src;
-        // 如果你想顯示 caption，可另外加一個文字層
-      }else{ // text
-        elem.innerHTML = slide.content;
-      }
+            function scheduleRemove(el, stay){          // 提前淡出再移除
+            setTimeout(()=>el.classList.remove('show'), stay-fade);
+            setTimeout(()=>stage.removeChild(el),       stay);
+            }
 
-      // 5. 淡入
-      // 等圖片載入後才淡入，避免閃白
-      (slide.type==='img' ? elem.decode?.().catch(()=>{}) : Promise.resolve())
-        .finally(()=> elem.classList.add('show'));
+            function showNext(){
+            const s = slides[idx];
 
-      // 6. 排定下一張時間
-      const stay = slide.duration || defaultDuration;
-      idx = (idx + 1) % slides.length;
-      setTimeout(showNext, stay);
-      }
+            if (s.type === 'text') {
+                const txt = document.createElement('div');
+                txt.className = 'layer textLayer';
+                txt.innerHTML = s.content;
+                stage.appendChild(txt);
+                requestAnimationFrame(()=>txt.classList.add('show'));
+                scheduleRemove(txt, s.duration);
+                setTimeout(showNext, s.duration);
 
-      // 先顯示第一張
-      showNext();
-    </script>
-  </body>
+            } else if (s.type === 'img') {
+                const img = document.createElement('img');
+                img.className = 'layer imgLayer';
+                img.src = s.src;
+                stage.appendChild(img);
+                img.decode?.().catch(()=>{}).finally(()=>img.classList.add('show'));
+                scheduleRemove(img, s.duration);
+                setTimeout(showNext, s.duration);
+
+            } else if (s.type === 'combo') {
+                // 1) 文字層
+                const txt = document.createElement('div');
+                txt.className = 'layer textLayer';
+                txt.innerHTML = s.content;
+                stage.appendChild(txt);
+                requestAnimationFrame(()=>txt.classList.add('show'));
+                scheduleRemove(txt, s.textStay);
+
+                // 2) 圖片層（稍晚才顯示）
+                setTimeout(()=>{
+                const img = document.createElement('img');
+                img.className = 'layer imgLayer';
+                img.src = s.img;
+                stage.appendChild(img);
+                img.decode?.().catch(()=>{}).finally(()=>img.classList.add('show'));
+                scheduleRemove(img, s.imgStay);
+                }, s.imgDelay || 0);
+
+                // 3) 下一張排程：以兩層中較長者為準
+                const comboStay = Math.max(s.textStay, (s.imgDelay||0)+s.imgStay);
+                setTimeout(showNext, comboStay);
+            }
+
+            idx = (idx + 1) % slides.length;
+            }
+            showNext();
+        </script>
+    </body>
 </html>
